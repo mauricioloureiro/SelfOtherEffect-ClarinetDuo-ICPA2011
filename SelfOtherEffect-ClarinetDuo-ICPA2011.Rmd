@@ -2,8 +2,8 @@
 title: "SelfOtherEffect-ClarinetDuo-ICPA2011"
 author: "Davi Alves Mota, Thiago de Almeida Magalhães Campolina, Maurício Alves Loureiro"
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 
 # Evidence for self-other effects and structure-related attentional mechanisms in the primo/secondo performances of clarinetists
@@ -39,9 +39,10 @@ Five professional clarinet players and one student with previous experience in o
 ### Music Material
 In order to replicate as much as possible a real performance situation, we chose a short excerpt extracted form the *Dance of the Peasant and the Bear* of Igor Stravinsky’s ballet *Petrushka*, where “the peasant plays the pipe and the bear walks on his hind feet”. This is a *soli a due* passage in which first and second clarinets play in unison. The selected excerpt not only demands synchronization in every single, but also guarantees equal musical conditions for both co-performers, unlike in a regular duet situation, where *primo* and *second* play distinct parts. Besides that, the experiment presented a situation closer to a real performance situation, since professional clarinetists are all familiar with this unison condition.
 
-![Fig. 1: Soli a due](/Users/mauricio/Arquivos/GitHubRepositories/SelfOtherEffect-ClarinetDuo-ICPA2011/experiment-preprocess/excerpts/Petroushka-solo-a-due-excerpt.png)
+![Fig. 1: Soli a due](/Users/mauricio/Arquivos/GitHubRepositories/SelfOtherEffect-ClarinetDuo-ICPA2011/experiment/excerpts/Petroushka-solo-a-due-excerpt.png)
 
-![Fig. 2: Orchestral excerpt](/Users/mauricio/Arquivos/GitHubRepositories/SelfOtherEffect-ClarinetDuo-ICPA2011/experiment-preprocess/excerpts/Petroushka-orchestral-excerpt.png)
+
+![Fig. 2: Orchestral excerpt](/Users/mauricio/Arquivos/GitHubRepositories/SelfOtherEffect-ClarinetDuo-ICPA2011/experiment/excerpts/Petroushka-orchestral-excerpt.png)
 
 ### Experiment
 
@@ -70,19 +71,20 @@ O código abaixo carrega os dados, nomeia as variáveis e calcula a assincronia 
 ```
 
 ```{r}
+rm(list=ls())
 library (car)
-onset.data <- read.table ("raw_data", header = FALSE)
+onset.data <- read.table ("raw_data.txt", header = FALSE)
 names (onset.data) <- c ("primo", "secondo", "composer", "take","note", "primo.onset", "secondo.onset")
-
 ```
   
 **_________________________________________________________________________**  
-Total de 5904 observações = 4 takes x 41 notas x 36 duetos (6 clarinetistas em dueto com 6 clarinetistas, inclusive o próprio). Apenas 5330 observações foram capturadas. O código calcula missing takes.  
+Total de 5904 observações = 4 takes x 41 notas x 36 duetos (6 clarinetistas em dueto com 6 clarinetistas, inclusive o próprio). Apenas 5330 observações foram capturadas. O código calcula missing takescomo primo e como secondo.  
 **_________________________________________________________________________**  
 
 ```{r}
-takes <- tapply(onset.data$primo,onset.data$primo,length)/41
-cbind(takes, missing.takes = 24-takes)
+takes.pri <- tapply(onset.data$primo,onset.data$primo,length)/41
+takes.sec <- tapply(onset.data$secondo,onset.data$secondo,length)/41
+cbind(takes.pri, missing.takes.pri = 24-takes.pri, takes.sec, missing.takes.sec = 24-takes.sec)
 ```
   
 ### Asynchrony Measure
@@ -90,26 +92,26 @@ First, the temporal synchronization of each duo was analyzed, measuring the asyn
 
 
 **_________________________________________________________________________**  
-plota a distribuição da assincroniar.  
+plota a distribuição da assincronia.  
 [author: Rafel Laboissier]  
 **_________________________________________________________________________** 
 
 ```{r}
-async <- (onset.data$secondo.onset - onset.data$primo.onset) / 44100
-d <- density(async,na.rm=TRUE)
+onset.data$asynchrony <- (onset.data$secondo.onset - onset.data$primo.onset) / 44100
+d <- density(onset.data$asynchrony,na.rm=TRUE)
 plot (d, las = 1, main = "", xlab = "onset asynchrony (s)")
 abline (v = 0, col = "gray")
 
 dev.copy2pdf (file = "figures/asynchrony-distribution.pdf")
 
 # calcula a média da assincronia e o instante onde é máxima 
-mean(async,na.rm=T)*1000
+mean(onset.data$asynchrony,na.rm=T)*1000
 d$x[which(d$y==max(d$y))]*1000
 ```
 
 Fig. 3: Signed asynchrony distribution
 
-The mean values of the signed asynchrony observed in each "self"	and “other” situations, were both colse to zero with no significant difference, as shown in the left panel of Fig. 4. The right panel shows the absolute asynchrony. The boxplots. Both asynchrony signed and absolute show grater variability for the *other* conditon. 
+The mean values of the signed asynchrony observed in each "self"	and “other” situations, were both colse to zero with no significant difference, as shown in the left panel of ### Fig. 4.## The right panel shows the absolute asynchrony. The boxplots. Both asynchrony signed and absolute show grater variability for the *other* conditon. 
 
 **_________________________________________________________________________**  
 boxplots das assincronias real e absoluta para cada condição self other.  
@@ -121,7 +123,6 @@ who <- rep ("other", nrow (onset.data))
 idx <- which (onset.data$primo == onset.data$secondo) 
 who [idx] <- "self"
 onset.data$who <- factor (who)
-onset.data$asynchrony <- async
 
 par(mfrow=c(1,2))
 boxplot (asynchrony ~ who, data = onset.data, ylab = "asynchrony (s)", las = 1)
@@ -140,10 +141,10 @@ distribuição da assincronia absoluta.
 **_________________________________________________________________________** 
 
 ```{r}
-onset.data$asynchrony <- abs(async)
+onset.data$asynchrony <- abs(onset.data$asynchrony)
 plot (density (onset.data$asynchrony, na.rm = TRUE), ylim = c(-0.15, 17), xlab = "|asynchrony|",
 las = 1, main = "")
-points (onset.data$asynchrony, rnorm (length (async), sd = 0.15), pch = 19, cex = 0.3)
+points (onset.data$asynchrony, rnorm (length (onset.data$asynchrony), sd = 0.15), pch = 19, cex = 0.3)
 dev.copy2pdf (file = "figures/abs-asynchrony-distribution.pdf")
 
 ```
@@ -158,7 +159,7 @@ Correção da assimetria: O bloco de códigos abaixo foi utilizado para a corre�
 
 
 ```{r}
-y <- bcPower (abs(async), powerTransform (abs(async))$lambda)
+y <- bcPower (onset.data$asynchrony, powerTransform (onset.data$asynchrony)$lambda)
 plot (density (y, na.rm = TRUE), ylim = c(-0.013, 1.3),
         xlab = "|asynchrony|^lambda", las = 1, main = "")
   points (y, rnorm (length (y), sd = 0.013), pch = 19, cex = 0.3)
@@ -168,13 +169,10 @@ dev.copy2pdf (file = "figures/corrected-abs-asynchrony-distribution.pdf")
 skewness.coeff <- function (x)
     mean ((x - mean (x, na.rm = TRUE))^3, na.rm = TRUE)/sd (x, na.rm = TRUE)^3
 
-skewness.coeff (abs(async))
+skewness.coeff (onset.data$asynchrony)
 skewness.coeff (y)
 
 ```
-
-
-
 
 [7] Box GEP & Cox DR (1964). An analysis of transformations,J Roy Stat Soc B Met, 26(2):211–252.
 
@@ -185,7 +183,8 @@ Asynchronies were significantly greater in the situation in which *secondos* acc
 ```{r}
 ## Copmpute note times from primo executions (for locating the notes along x axis)
 onsets <- aggregate (primo.onset ~ note, data = onset.data, mean)$primo.onset / 44100
-onsets <- onsets + onsets [15] - 2 * onsets [11]
+onsets <- onsets + onsets [15] - 2 * onsets [11]   # fixa o início da partitura = zero subtraindo a duração de um compasso do onset da nota 15 (nota 1 do compasso 2)
+# como não tem nota no tempo 1 do compasso 1, subtrai 2 metades do compasso 1 (2* nota 11)toma a duração # su trai 
 onset.data$time <- onsets [onset.data$note]
 
 ## Compute aggregate means and standard errors (for ploting on y axis)
@@ -225,42 +224,43 @@ Plot the same using skewness-corrected data of asynchrony
 *_______________________________________*    
 
 ```{r}
-
-onset.data$asynchrony <- y
-onset.mean <- aggregate (asynchrony ~ who + time + note, data = onset.data, mean)
-se <- function (x) { sd (x) / sqrt (length (x)) }
-onset.se <- aggregate (asynchrony ~ who + time + note, data = onset.data, se)
-
-## Plot results
-spacing <- 0.16 * c (0.1, -0.1)
-colors <- c ("red", "blue")
-plot (onset.mean$time + spacing , onset.mean$asynchrony, pch = 19,
-      col = colors [onset.mean$who], las = 1, xlab = "time (s)",
-      ylab = "|aysnchrony| (s)")
-#ylim = c (0.01, 0.07)
-
-condition <- c ("other", "self")
-for (i in 1 : 41) {
-    for (j in 1 : 2) {
-        idx <- which (onset.mean$note == i & onset.mean$who == condition [j])
-        lines (rep (onsets [i], 2) + spacing [j],
-               onset.se$asynchrony [idx] * c (-1, 1) + onset.mean$asynchrony[idx],
-               col = colors [j])
-    }
-}
-
-for (i in c (11, 15, 25, 41)) {
-    abline (v = onsets [i], col = "#00000080")
-}
-abline (v = 0, col = "#00000080", lty = 2)
-abline (v = mean (onsets [c (25, 41)]), col = "#00000080", lty = 2)
-
-# return to uncorrected data
-onset.data$asynchrony <- abs(async)
-
-dev.copy2pdf (file = "figures/corrected-asynchrony-notes-who.pdf", width = 12, height = 5)
-
+# ## Compute aggregate means and standard errors (for ploting on y axis)
+# onset.data$asynchrony <- y
+# onset.mean <- aggregate (asynchrony ~ who + time + note, data = onset.data, mean)
+# se <- function (x) { sd (x) / sqrt (length (x)) }
+# onset.se <- aggregate (asynchrony ~ who + time + note, data = onset.data, se)
+# 
+# ## Plot results: points (time,asynchrony) 
+# spacing <- 0.16 * c (0.1, -0.1)
+# colors <- c ("red", "blue")
+# plot (onset.mean$time + spacing , onset.mean$asynchrony, pch = 19,
+#       col = colors [onset.mean$who], las = 1, xlab = "time (s)",
+#       ylab = "|aysnchrony| (s)")
+# #ylim = c (0.01, 0.07)
+# 
+# ## Plot results: standart errors lines upwards & downwards on points (time,asynchrony) 
+# condition <- c ("other", "self")
+# for (i in 1 : 41) {
+#     for (j in 1 : 2) {
+#         idx <- which (onset.mean$note == i & onset.mean$who == condition [j])
+#         lines (rep (onsets [i], 2) + spacing [j],
+#                onset.se$asynchrony [idx] * c (-1, 1) + onset.mean$asynchrony[idx],
+#                col = colors [j])
+#     }
+# }
+# 
+# for (i in c (11, 15, 25, 41)) {
+#     abline (v = onsets [i], col = "#00000080")
+# }
+# abline (v = 0, col = "#00000080", lty = 2)
+# abline (v = mean (onsets [c (25, 41)]), col = "#00000080", lty = 2)
+# 
+# # return to uncorrected data
+# onset.data$asynchrony <- abs((onset.data$secondo.onset - onset.data$primo.onset)) / 44100
+# 
+# dev.copy2pdf (file = "figures/corrected-asynchrony-notes-who.pdf", width = 12, height = 5)
 ```
+
 
 ![Fig. 5: Asynchrony values in the *other* situation (in red), compared to the *self* situation in (blue).](/Users/mauricio/Arquivos/GitHubRepositories/SelfOtherEffect-ClarinetDuo-ICPA2011/figures/Rafael/asynchrony-notes-who-temporal.png)
 
@@ -426,10 +426,7 @@ dev.copy2pdf (file = "figures/random-effects-signed-asynchrony.pdf", width=5, he
 
 ```
 
-
-
-
-
+ 
 
 
 
