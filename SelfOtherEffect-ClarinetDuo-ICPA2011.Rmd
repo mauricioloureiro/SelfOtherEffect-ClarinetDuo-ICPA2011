@@ -142,9 +142,9 @@ distribuição da assincronia absoluta.
 
 ```{r}
 onset.data$asynchrony <- abs(onset.data$asynchrony)
-plot (density (onset.data$asynchrony, na.rm = TRUE), ylim = c(-0.15, 17), xlab = "|asynchrony|",
-las = 1, main = "")
-points (onset.data$asynchrony, rnorm (length (onset.data$asynchrony), sd = 0.15), pch = 19, cex = 0.3)
+plot (density (onset.data$asynchrony, na.rm = TRUE), ylim = c(-0.15, 17), xlab = "|asynchrony|", las = 1, main = "")
+points (onset.data$asynchrony, rnorm (length (onset.data$asynchrony), sd = 0.15), pch = 19, cex = 0.3
+        )
 dev.copy2pdf (file = "figures/abs-asynchrony-distribution.pdf")
 
 ```
@@ -181,10 +181,13 @@ skewness.coeff (y)
 Asynchronies were significantly greater in the situation in which *secondos* accompanied other *primo* (situation *other*) compared to the situation in which *secondos* accompanied their own *primo* recordings (situation *self*). Fig. 5 shows the average values of asynchrony for each note on a time scale (situation *other* in red and *self* in blue). Low values of asynchrony were also observed in notes coinciding with strong measure pulses (the vertical lines correspond to the units of time in the measure).
 
 ```{r}
-## Copmpute note times from primo executions (for locating the notes along x axis)
+## Compute note times from primo executions (for locating the notes along x axis)
 onsets <- aggregate (primo.onset ~ note, data = onset.data, mean)$primo.onset / 44100
-onsets <- onsets + onsets [15] - 2 * onsets [11]   # fixa o início da partitura = zero subtraindo a duração de um compasso do onset da nota 15 (nota 1 do compasso 2)
-# como não tem nota no tempo 1 do compasso 1, subtrai 2 metades do compasso 1 (2* nota 11)toma a duração # su trai 
+# estima o instante zero da partitura, "onsets[0]" (início da pausa de colcheia) e subtrai d0s onsets:
+# onsets[0] = onsets[15] (primeira nota do compasso 2) - duração do compasso 1
+# compasso 1 = 2*(onsets[15] - onsets[11]) (compasso 1 não tem onset no início);
+# onsets[0] = onsets[15] - 2*(onsets[15]-onsets[11]) = 2*onsets[11]-onsets[15]
+onsets <- onsets + onsets [15] - 2 * onsets [11]   
 onset.data$time <- onsets [onset.data$note]
 
 ## Compute aggregate means and standard errors (for ploting on y axis)
@@ -215,7 +218,7 @@ for (i in c (11, 15, 25, 41)) {
 }
 abline (v = 0, col = "#00000080", lty = 2)
 abline (v = mean (onsets [c (25, 41)]), col = "#00000080", lty = 2)
-
+text(mean (onsets [c (25, 41)]),0.01,label=round(mean (onsets [c (25, 41)]),digits=2))
 dev.copy2pdf (file = "figures/asynchrony-notes-who.pdf", width = 12, height = 5)
 ```
 
@@ -224,46 +227,42 @@ Plot the same using skewness-corrected data of asynchrony
 *_______________________________________*    
 
 ```{r}
-# ## Compute aggregate means and standard errors (for ploting on y axis)
-# onset.data$asynchrony <- y
-# onset.mean <- aggregate (asynchrony ~ who + time + note, data = onset.data, mean)
-# se <- function (x) { sd (x) / sqrt (length (x)) }
-# onset.se <- aggregate (asynchrony ~ who + time + note, data = onset.data, se)
-# 
-# ## Plot results: points (time,asynchrony) 
-# spacing <- 0.16 * c (0.1, -0.1)
-# colors <- c ("red", "blue")
-# plot (onset.mean$time + spacing , onset.mean$asynchrony, pch = 19,
-#       col = colors [onset.mean$who], las = 1, xlab = "time (s)",
-#       ylab = "|aysnchrony| (s)")
-# #ylim = c (0.01, 0.07)
-# 
-# ## Plot results: standart errors lines upwards & downwards on points (time,asynchrony) 
-# condition <- c ("other", "self")
-# for (i in 1 : 41) {
-#     for (j in 1 : 2) {
-#         idx <- which (onset.mean$note == i & onset.mean$who == condition [j])
-#         lines (rep (onsets [i], 2) + spacing [j],
-#                onset.se$asynchrony [idx] * c (-1, 1) + onset.mean$asynchrony[idx],
-#                col = colors [j])
-#     }
-# }
-# 
-# for (i in c (11, 15, 25, 41)) {
-#     abline (v = onsets [i], col = "#00000080")
-# }
-# abline (v = 0, col = "#00000080", lty = 2)
-# abline (v = mean (onsets [c (25, 41)]), col = "#00000080", lty = 2)
-# 
-# # return to uncorrected data
-# onset.data$asynchrony <- abs((onset.data$secondo.onset - onset.data$primo.onset)) / 44100
-# 
-# dev.copy2pdf (file = "figures/corrected-asynchrony-notes-who.pdf", width = 12, height = 5)
+## Compute aggregate means and standard errors (for ploting on y axis)
+onset.data$asynchrony <- y
+onset.mean <- aggregate (asynchrony ~ who + time + note, data = onset.data, mean)
+se <- function (x) { sd (x) / sqrt (length (x)) }
+onset.se <- aggregate (asynchrony ~ who + time + note, data = onset.data, se)
+
+## Plot results: points (time,asynchrony)
+spacing <- 0.16 * c (0.1, -0.1)
+colors <- c ("red", "blue")
+plot (onset.mean$time + spacing , onset.mean$asynchrony, pch = 19,
+      col = colors [onset.mean$who], las = 1, xlab = "time (s)",
+      ylab = "|aysnchrony| (s)")
+#ylim = c (0.01, 0.07)
+
+## Plot results: standart errors lines upwards & downwards on points (time,asynchrony)
+condition <- c ("other", "self")
+for (i in 1 : 41) {
+    for (j in 1 : 2) {
+        idx <- which (onset.mean$note == i & onset.mean$who == condition [j])
+        lines (rep (onsets [i], 2) + spacing [j],
+               onset.se$asynchrony [idx] * c (-1, 1) + onset.mean$asynchrony[idx],
+               col = colors [j])
+    }
+}
+
+for (i in c (11, 15, 25, 41)) {
+    abline (v = onsets [i], col = "#00000080")
+}
+abline (v = 0, col = "#00000080", lty = 2)
+abline (v = mean (onsets [c (25, 41)]), col = "#00000080", lty = 2)
+
+# return to uncorrected data
+onset.data$asynchrony <- abs((onset.data$secondo.onset - onset.data$primo.onset)) / 44100
+
+dev.copy2pdf (file = "figures/corrected-asynchrony-notes-who.pdf", width = 12, height = 5)
 ```
-
-
-![Fig. 5: Asynchrony values in the *other* situation (in red), compared to the *self* situation in (blue).](/Users/mauricio/Arquivos/GitHubRepositories/SelfOtherEffect-ClarinetDuo-ICPA2011/figures/Rafael/asynchrony-notes-who-temporal.png)
-
 A generalized linear mixed model (GLMM) [8] was fitted to the transformed data using the 3 fixed factors:
 
 - WHO - a discrete factor with levels "self" and "other";
