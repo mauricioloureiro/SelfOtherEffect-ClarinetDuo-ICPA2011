@@ -183,9 +183,10 @@ Asynchronies were significantly greater in the situation in which *secondos* acc
 ```{r}
 ## Compute note times from primo executions (for locating the notes along x axis)
 onsets <- aggregate (primo.onset ~ note, data = onset.data, mean)$primo.onset / 44100
-# estima o instante zero da partitura, "onsets[0]" (início da pausa de colcheia) e subtrai d0s onsets:
+
+# estima o instante zero da partitura, "onsets[0]" (início da pausa de colcheia) e subtrai dos onsets:
 # onsets[0] = onsets[15] (primeira nota do compasso 2) - duração do compasso 1
-# compasso 1 = 2*(onsets[15] - onsets[11]) (compasso 1 não tem onset no início);
+# compasso 1 = 2*(onsets[15] - onsets[11]) (compasso 1 inicia com pausa);
 # onsets[0] = onsets[15] - 2*(onsets[15]-onsets[11]) = 2*onsets[11]-onsets[15]
 onsets <- onsets + onsets [15] - 2 * onsets [11]   
 onset.data$time <- onsets [onset.data$note]
@@ -219,6 +220,7 @@ for (i in c (11, 15, 25, 41)) {
 abline (v = 0, col = "#00000080", lty = 2)
 abline (v = mean (onsets [c (25, 41)]), col = "#00000080", lty = 2)
 text(mean (onsets [c (25, 41)]),0.01,label=round(mean (onsets [c (25, 41)]),digits=2))
+abline(h=0,lty=2)
 dev.copy2pdf (file = "figures/asynchrony-notes-who.pdf", width = 12, height = 5)
 ```
 
@@ -263,6 +265,8 @@ onset.data$asynchrony <- abs((onset.data$secondo.onset - onset.data$primo.onset)
 
 dev.copy2pdf (file = "figures/corrected-asynchrony-notes-who.pdf", width = 12, height = 5)
 ```
+
+
 A generalized linear mixed model (GLMM) [8] was fitted to the transformed data using the 3 fixed factors:
 
 - WHO - a discrete factor with levels "self" and "other";
@@ -291,7 +295,7 @@ vetor nos níveis sugeridos.
   onset.data <- read.table ("raw_data", header = FALSE)
   names (onset.data) <- c ("primo", "secondo", "composer", "take", "note",
                            "primo.onset", "secondo.onset")
-  onset.data$signed.asynchrony <- abs (onset.data$secondo.onset
+  onset.data$signed.asynchrony <- abs (onset.data$secondo.onset 
                                    - onset.data$primo.onset) / 44100
   who <- rep ("other", nrow (onset.data))
   idx <- which (onset.data$primo == onset.data$secondo)
@@ -304,8 +308,7 @@ O bloco seguinte aplica a função =lmer= aos dados.
 
 ```{r}
 
-  fm0 <- lmer(signed.asynchrony ~ who + take + (1 | primo) + (1 | secondo),
-              data = onset.data)
+  fm0 <- lmer(signed.asynchrony ~ who + take + (1 | primo) + (1 | secondo), data = onset.data)
 
   K <- rbind (c (1, -1, 0), c (0, 0, 1))
   (ci <- confint (glht (fm0, linfct = K)))
@@ -328,12 +331,12 @@ subgrupos com /self/ e /other/.
 ```{r}
 
 self.data <- onset.data[which(onset.data[,9]=="self"),]
-fixef(lmer(signed.asynchrony*1000 ~ take + (1 | primo) + (1 | secondo),
-             data = self.data))[2]
+eftake.self <- fixef(lmer(signed.asynchrony*1000 ~ take + (1 | primo) + (1 | secondo),
+             data = self.data))
 
   other.data <- onset.data[which(onset.data[,9]=="other"),]
-  fixef(lmer(signed.asynchrony*1000 ~ take + (1 | primo) + (1 | secondo),
-             data = other.data))[2]
+  eftake.other <- fixef(lmer(signed.asynchrony*1000 ~ take + (1 | primo) + (1 | secondo),
+             data = other.data))
 ```
 
 Ao analisarmos os resultados dos ajustes dos modelos acima, podemos
@@ -426,19 +429,9 @@ dev.copy2pdf (file = "figures/random-effects-signed-asynchrony.pdf", width=5, he
 ```
 
  
-
-
-
-
-
 The GLMM fit showed that the mean asynchrony is around 30 ms with a statistically significant drop of 6 ms when performers played with themselves.  This is coherent with results found elsewhere.  No significant TAKE effect was found, probably because the musicians could learn how to accompany from hearing the preliminary primo recording. 
 
-
-
-
 A zoomed plot for the fitted values is shown in figure [2], together with the standard error around the estimated values.  The difference between the self and other asynchronies for take #1 is of 9.9 ms. This value is significantly different from zero (95% confidence interval: [6.2, 13.7], p < 0.0001).  For the "other" condition, there is a significant change of the asynchrony with the take, with a decrease of 1.4 ms per take (95% confidence interval: [0.6, 2.3], p < 0.01).  The change of asynchrony with take is not significant for the "self" condition, although there is a slight decrease of 0.4 ms per take.
-
-
 
 All three random effects were significant, what demonstrates that, first, some performers are easier to follow than others, second, some performers are better followers than others and, third, performers behave differently as regards the adaptation of the synchronization during the excerpt.
 
